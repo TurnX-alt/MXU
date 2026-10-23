@@ -48,7 +48,7 @@ os_info = "3"
 urlencoding = "2.1"
 notify-rust = "4"
 shell-words = "1.1.1"
-maa-framework = { version = "1.22.0", features = ["dynamic"] }
+maa-framework = { git = "https://github.com/TurnX-alt/maa-framework-rs", rev = "953ec242d2542ab907211a4aa347b9a855f698aa", features = ["dynamic"] }
 rust-embed = "8"
 clap = { version = "4", features = ["derive"] }
 # 匿名遥测（数据埋点）
