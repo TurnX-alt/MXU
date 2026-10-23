@@ -119,6 +119,13 @@ pub enum ControllerConfig {
         #[serde(default)]
         display_short_side: Option<i32>,
     },
+    /// CloudWeb 浏览器后端（先使用 fake backend 验证 Host/pool/lifetime）。
+    CloudWeb {
+        backend: String,
+        session_id: String,
+        #[serde(default)]
+        display_short_side: Option<i32>,
+    },
     /// Linux 原生控制器（截图：Wlr/PipeWire，输入：Wlr/UInput/Libei）
     Linux {
         screencap_method: u64,
@@ -163,6 +170,23 @@ mod tests {
                 handle: 42,
                 screencap_method: 1,
                 input_method: 2,
+                display_short_side: None,
+            }
+        );
+    }
+
+    #[test]
+    fn deserializes_cloudweb_controller_config() {
+        let config: ControllerConfig = serde_json::from_str(
+            r#"{"type":"CloudWeb","backend":"fake","session_id":"session-a"}"#,
+        )
+        .expect("CloudWeb controller config should deserialize");
+
+        assert_eq!(
+            config,
+            ControllerConfig::CloudWeb {
+                backend: "fake".to_string(),
+                session_id: "session-a".to_string(),
                 display_short_side: None,
             }
         );

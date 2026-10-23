@@ -17,6 +17,7 @@ use maa_framework::toolkit::MacOSPermission;
 use maa_framework::toolkit::Toolkit;
 use maa_framework::MaaStatus;
 
+use super::cloudweb;
 use super::types::{
     AdbDevice, ConnectionStatus, ControllerConfig, GamescopeInstance, MaaState, TaskStatus,
     VersionCheckResult, Win32Window,
@@ -931,6 +932,17 @@ pub async fn connect_controller_impl(
                 let uuid_str = uuid.as_deref().unwrap_or("");
                 Controller::new_playcover(address, uuid_str).map_err(|e| e.to_string())?
             }
+            ControllerConfig::CloudWeb {
+                backend,
+                session_id,
+                ..
+            } => match backend.as_str() {
+                "fake" => Controller::new_custom(cloudweb::FakeCloudWebController::new(
+                    session_id.clone(),
+                ))
+                .map_err(|e| e.to_string())?,
+                other => return Err(format!("Unsupported CloudWeb backend: {other}")),
+            },
             ControllerConfig::Gamepad {
                 handle,
                 gamepad_type,
@@ -1041,6 +1053,9 @@ pub async fn connect_controller_impl(
                 display_short_side, ..
             }
             | ControllerConfig::PlayCover {
+                display_short_side, ..
+            }
+            | ControllerConfig::CloudWeb {
                 display_short_side, ..
             }
             | ControllerConfig::Linux {
