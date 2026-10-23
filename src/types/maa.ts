@@ -95,6 +95,14 @@ export interface GamepadControllerConfig {
   display_short_side?: number;
 }
 
+/** CloudWeb 控制器配置 */
+export interface CloudWebControllerConfig {
+  type: 'CloudWeb';
+  backend: string;
+  session_id: string;
+  display_short_side?: number;
+}
+
 /** 控制器配置 */
 export type ControllerConfig =
   | AdbControllerConfig
@@ -103,7 +111,8 @@ export type ControllerConfig =
   | WlRootsControllerConfig
   | LinuxControllerConfig
   | PlayCoverControllerConfig
-  | GamepadControllerConfig;
+  | GamepadControllerConfig
+  | CloudWebControllerConfig;
 
 /** 连接状态 */
 export type ConnectionStatus = 'Disconnected' | 'Connecting' | 'Connected' | { Failed: string };

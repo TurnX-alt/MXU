@@ -6,6 +6,7 @@ import {
   Monitor,
   Apple,
   Gamepad2,
+  Cloud,
   RefreshCw,
   Loader2,
   Check,
@@ -25,6 +26,7 @@ import type { AdbDevice, Win32Window, GamescopeInstance, ControllerConfig } from
 import type { ControllerItem, ResourceItem } from '@/types/interface';
 import { computeResourcePaths } from '@/utils/resourcePath';
 import { buildPlayCoverControllerConfig } from '@/utils/playCoverController';
+import { buildCloudWebControllerConfig } from '@/utils/cloudWebController';
 import {
   buildDesktopWindowControllerConfig,
   buildLinuxControllerConfig,
@@ -690,6 +692,10 @@ export function ConnectionPanel() {
         );
         deviceName = playcoverAddress;
         targetType = 'device';
+      } else if (controllerType === 'CloudWeb') {
+        config = buildCloudWebControllerConfig(currentController);
+        deviceName = currentController.name;
+        targetType = 'device';
       } else {
         throw new Error(
           isDesktopWindowController ? t('controller.selectWindow') : t('controller.selectDevice'),
@@ -825,6 +831,8 @@ export function ConnectionPanel() {
         return <Apple className="w-4 h-4" />;
       case 'Gamepad':
         return <Gamepad2 className="w-4 h-4" />;
+      case 'CloudWeb':
+        return <Cloud className="w-4 h-4" />;
       default:
         return <Smartphone className="w-4 h-4" />;
     }
@@ -1368,6 +1376,7 @@ export function ConnectionPanel() {
       return isLinuxReadyWith(selectedGamescopeInstance, selectedWlrootsSocket);
     }
     if (controllerType === 'PlayCover') return playcoverAddress.trim().length > 0;
+    if (controllerType === 'CloudWeb') return true;
     return false;
   };
 
@@ -1657,6 +1666,36 @@ export function ConnectionPanel() {
                     (isConnected || isRunning) && 'opacity-60 cursor-not-allowed',
                   )}
                 />
+                <button
+                  onClick={handleConnect}
+                  disabled={isConnecting || isConnected || !canConnect() || isRunning}
+                  className={clsx(
+                    'flex items-center justify-center px-3 py-1.5 rounded-md border transition-colors',
+                    isConnected
+                      ? 'bg-success/20 border-success/50 cursor-not-allowed'
+                      : isConnecting || !canConnect() || isRunning
+                        ? 'bg-bg-tertiary border-border opacity-50 cursor-not-allowed'
+                        : 'bg-accent border-accent text-white hover:bg-accent-hover',
+                  )}
+                  title={t('controller.connect')}
+                >
+                  {isConnecting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-text-secondary" />
+                  ) : isConnected ? (
+                    <Check className="w-3.5 h-3.5 text-success" />
+                  ) : (
+                    <Wifi className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* CloudWeb 连接入口（当前 fake backend；真实 sidecar 后续接入） */}
+            {controllerType === 'CloudWeb' && (
+              <div className="flex gap-2">
+                <div className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border bg-bg-tertiary border-border text-sm text-text-secondary truncate">
+                  {currentController?.name ?? 'CloudWeb'}
+                </div>
                 <button
                   onClick={handleConnect}
                   disabled={isConnecting || isConnected || !canConnect() || isRunning}

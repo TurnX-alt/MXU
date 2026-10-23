@@ -143,7 +143,13 @@ export type ControllerType =
   | 'WlRoots'
   | 'Linux'
   | 'PlayCover'
-  | 'Gamepad';
+  | 'Gamepad'
+  | 'CloudWeb';
+
+export interface CloudWebConfig {
+  backend?: string;
+  session_id?: string;
+}
 
 export interface ControllerItem {
   name: string;
@@ -166,6 +172,7 @@ export interface ControllerItem {
   linux?: LinuxConfig;
   playcover?: PlayCoverConfig;
   gamepad?: GamepadConfig;
+  cloudweb?: CloudWebConfig;
 }
 
 export interface Win32Config {

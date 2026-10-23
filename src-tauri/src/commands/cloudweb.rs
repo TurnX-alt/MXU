@@ -4,12 +4,14 @@
 //! identity and callback lifetime before the real sidecar/browser exists.
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use maa_framework::{custom_controller::CustomControllerCallback, ControllerFeature};
+use maa_framework::{
+    controller::Controller, custom_controller::CustomControllerCallback, ControllerFeature,
+};
 use serde_json::json;
 
-/// 1x1 red PNG. MaaFramework scales it to the configured screenshot target.
+/// 16:9 red PNG. MaaFramework scales it to the configured screenshot target.
 const FAKE_PNG_B64: &str =
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+    "iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAIAAAC0SDtlAAAAFUlEQVR4nGP4z8BAEiJN9agGWmkAACRlj3GqMTmoAAAAAElFTkSuQmCC";
 
 /// Deterministic fake controller used by the CloudWeb Host bridge.
 pub struct FakeCloudWebController {
@@ -29,6 +31,15 @@ impl FakeCloudWebController {
 
     pub fn session_id(&self) -> &str {
         &self.session_id
+    }
+}
+
+/// Build a CloudWeb controller for the configured backend.
+pub fn create_cloudweb_controller(backend: &str, session_id: &str) -> Result<Controller, String> {
+    match backend {
+        "fake" => Controller::new_custom(FakeCloudWebController::new(session_id))
+            .map_err(|error| error.to_string()),
+        other => Err(format!("Unsupported CloudWeb backend: {other}")),
     }
 }
 
@@ -214,5 +225,41 @@ mod tests {
         assert!(controller.click(100, 200));
         assert!(controller.touch_move(1, 10, 20, 1));
         assert!(controller.input_text("cloudweb"));
+    }
+
+    #[test]
+    fn fake_cloudweb_controller_connects_and_captures_native_frame() {
+        let Ok(sdk) = std::env::var("MAA_SDK_PATH") else {
+            return;
+        };
+        let sdk = std::path::PathBuf::from(sdk);
+        let dll = [
+            sdk.join("bin").join("MaaFramework.dll"),
+            sdk.join("MaaFramework.dll"),
+        ]
+        .into_iter()
+        .find(|path| path.exists());
+        let Some(dll) = dll else {
+            return;
+        };
+        if maa_framework::load_library(&dll).is_err() {
+            return;
+        }
+
+        let controller = super::create_cloudweb_controller("fake", "native-test")
+            .expect("create fake controller");
+        controller
+            .set_screenshot_target_short_side(720)
+            .expect("set target short side");
+
+        let connect_id = controller.post_connection().expect("post connection");
+        assert_eq!(controller.wait(connect_id).0, 3000);
+
+        let capture_id = controller.post_screencap().expect("post screencap");
+        assert_eq!(controller.wait(capture_id).0, 3000);
+
+        let image = controller.cached_image().expect("cached image");
+        assert_eq!(image.width(), 1280);
+        assert_eq!(image.height(), 720);
     }
 }

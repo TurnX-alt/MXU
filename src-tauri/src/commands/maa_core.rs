@@ -936,13 +936,7 @@ pub async fn connect_controller_impl(
                 backend,
                 session_id,
                 ..
-            } => match backend.as_str() {
-                "fake" => Controller::new_custom(cloudweb::FakeCloudWebController::new(
-                    session_id.clone(),
-                ))
-                .map_err(|e| e.to_string())?,
-                other => return Err(format!("Unsupported CloudWeb backend: {other}")),
-            },
+            } => cloudweb::create_cloudweb_controller(backend, session_id)?,
             ControllerConfig::Gamepad {
                 handle,
                 gamepad_type,
