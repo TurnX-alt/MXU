@@ -41,6 +41,10 @@ export interface SavedDeviceInfo {
   wlrSocketPath?: string;
   // PlayCover：保存地址
   playcoverAddress?: string;
+  /** CloudWeb：保存 Host 生成的 opaque session id */
+  cloudWebSessionId?: string;
+  /** CloudWeb：保存 browser profile id */
+  cloudWebProfile?: string;
   /** Win32 连接窗口对应的进程可执行文件路径 */
   connectedProgramPath?: string;
 }

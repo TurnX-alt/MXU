@@ -413,6 +413,7 @@ export default {
     connected: '已连接',
     disconnected: '未连接',
     connectionFailed: '连接失败',
+    cloudWebUnsupportedBackend: '当前版本尚未实现 CloudWeb sidecar backend；请使用 fake 测试配置。',
     refreshDevices: '刷新设备',
     refreshWindows: '刷新窗口',
     refresh: '刷新设备',

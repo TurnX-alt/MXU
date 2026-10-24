@@ -425,6 +425,8 @@ export default {
     connected: '接続済み',
     disconnected: '未接続',
     connectionFailed: '接続に失敗しました',
+    cloudWebUnsupportedBackend:
+      '現在のバージョンでは CloudWeb sidecar backend は未実装です。fake テスト設定を使用してください。',
     refreshDevices: 'デバイスを更新',
     refreshWindows: 'ウィンドウを更新',
     refresh: 'デバイスを更新',

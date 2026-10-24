@@ -43,6 +43,11 @@ import {
   isDesktopWindowControllerType,
 } from '@/utils/controller';
 import { buildPlayCoverControllerConfig } from '@/utils/playCoverController';
+import {
+  buildCloudWebControllerConfig,
+  createCloudWebSessionId,
+  resolveCloudWebSessionId,
+} from '@/utils/cloudWebController';
 import { SchedulePanel } from './SchedulePanel';
 import type {
   Instance,
@@ -165,6 +170,7 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
     setInstanceTaskStatus,
     setInstanceConnectionStatus,
     setInstanceResourceLoaded,
+    setInstanceSavedDevice,
     selectedController,
     selectedResource,
     // 定时执行状态
@@ -442,7 +448,8 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
         (savedDevice.adbDeviceName ||
           savedDevice.windowName ||
           savedDevice.wlrSocketPath ||
-          savedDevice.playcoverAddress),
+          savedDevice.playcoverAddress ||
+          savedDevice.cloudWebSessionId),
       );
       if (!controller) {
         return failStart(t('errors.controllerNotFound'));
@@ -843,6 +850,27 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
               );
               deviceName = savedDevice.playcoverAddress;
               targetType = 'device';
+            } else if (controllerType === 'CloudWeb' && savedDevice.cloudWebSessionId) {
+              const profile = controller.cloudweb?.profile || 'default';
+              const sessionId = resolveCloudWebSessionId(
+                savedDevice.cloudWebSessionId,
+                savedDevice.cloudWebProfile,
+                profile,
+              );
+              if (sessionId !== savedDevice.cloudWebSessionId) {
+                setInstanceSavedDevice(targetId, {
+                  ...savedDevice,
+                  cloudWebSessionId: sessionId,
+                  cloudWebProfile: profile,
+                });
+              }
+              const cloudWebConfig = buildCloudWebControllerConfig(controller, sessionId);
+              if (!cloudWebConfig) {
+                return failStart(t('controller.cloudWebUnsupportedBackend'));
+              }
+              config = cloudWebConfig;
+              deviceName = controller.name;
+              targetType = 'device';
             } else if (controllerType === 'Linux') {
               const found = await discoverLinuxControllerConfig(controller, savedDevice, {
                 portal: t('controller.portal'),
@@ -926,6 +954,20 @@ export function Toolbar({ showAddPanel, onToggleAddPanel, className }: ToolbarPr
             } else if (controllerType === 'PlayCover') {
               // PlayCover 没有搜索功能，无法自动连接
               return failStart(t('taskList.autoConnect.needConfig'));
+            } else if (controllerType === 'CloudWeb') {
+              const sessionId = createCloudWebSessionId();
+              const cloudWebConfig = buildCloudWebControllerConfig(controller, sessionId);
+              if (!cloudWebConfig) {
+                return failStart(t('controller.cloudWebUnsupportedBackend'));
+              }
+              setInstanceSavedDevice(targetId, {
+                ...savedDevice,
+                cloudWebSessionId: sessionId,
+                cloudWebProfile: cloudWebConfig.profile,
+              });
+              config = cloudWebConfig;
+              deviceName = controller.name;
+              targetType = 'device';
             } else if (controllerType === 'Linux') {
               const found = await discoverLinuxControllerConfig(controller, undefined, {
                 portal: t('controller.portal'),

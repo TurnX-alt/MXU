@@ -367,6 +367,7 @@ function getUnsupportedControllerTypes(os: string): Set<ControllerType> {
   if (!isWindows) {
     unsupported.add('Win32');
     unsupported.add('Gamepad');
+    unsupported.add('CloudWeb');
   }
   // 非 macOS 系统不支持原生 macOS 控制器和 PlayCover
   if (!isMacOS) {

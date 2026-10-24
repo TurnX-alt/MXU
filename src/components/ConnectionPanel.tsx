@@ -26,7 +26,7 @@ import type { AdbDevice, Win32Window, GamescopeInstance, ControllerConfig } from
 import type { ControllerItem, ResourceItem } from '@/types/interface';
 import { computeResourcePaths } from '@/utils/resourcePath';
 import { buildPlayCoverControllerConfig } from '@/utils/playCoverController';
-import { buildCloudWebControllerConfig } from '@/utils/cloudWebController';
+import { buildCloudWebControllerConfig, isCloudWebBackendSupported, resolveCloudWebSessionId } from '@/utils/cloudWebController';
 import {
   buildDesktopWindowControllerConfig,
   buildLinuxControllerConfig,
@@ -693,7 +693,22 @@ export function ConnectionPanel() {
         deviceName = playcoverAddress;
         targetType = 'device';
       } else if (controllerType === 'CloudWeb') {
-        config = buildCloudWebControllerConfig(currentController);
+        const profile = currentController?.cloudweb?.profile || 'default';
+        const sessionId = resolveCloudWebSessionId(
+          activeInstance?.savedDevice?.cloudWebSessionId,
+          activeInstance?.savedDevice?.cloudWebProfile,
+          profile,
+        );
+        const cloudWebConfig = buildCloudWebControllerConfig(currentController, sessionId);
+        if (!cloudWebConfig) {
+          throw new Error(t('controller.cloudWebUnsupportedBackend'));
+        }
+        setInstanceSavedDevice(instanceId, {
+          ...activeInstance?.savedDevice,
+          cloudWebSessionId: sessionId,
+          cloudWebProfile: cloudWebConfig.profile,
+        });
+        config = cloudWebConfig;
         deviceName = currentController.name;
         targetType = 'device';
       } else {
@@ -1376,7 +1391,12 @@ export function ConnectionPanel() {
       return isLinuxReadyWith(selectedGamescopeInstance, selectedWlrootsSocket);
     }
     if (controllerType === 'PlayCover') return playcoverAddress.trim().length > 0;
-    if (controllerType === 'CloudWeb') return true;
+    if (controllerType === 'CloudWeb') {
+      return (
+        !!currentController &&
+        isCloudWebBackendSupported(currentController.cloudweb?.backend ?? 'fake')
+      );
+    }
     return false;
   };
 
@@ -1693,8 +1713,13 @@ export function ConnectionPanel() {
             {/* CloudWeb 连接入口（当前 fake backend；真实 sidecar 后续接入） */}
             {controllerType === 'CloudWeb' && (
               <div className="flex gap-2">
-                <div className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border bg-bg-tertiary border-border text-sm text-text-secondary truncate">
-                  {currentController?.name ?? 'CloudWeb'}
+                <div className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border bg-bg-tertiary border-border text-sm text-text-secondary">
+                  <div className="truncate">{currentController?.name ?? 'CloudWeb'}</div>
+                  {!isCloudWebBackendSupported(currentController?.cloudweb?.backend ?? 'fake') && (
+                    <div className="mt-0.5 text-xs text-text-muted">
+                      {t('controller.cloudWebUnsupportedBackend')}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={handleConnect}

@@ -124,6 +124,8 @@ pub enum ControllerConfig {
         backend: String,
         session_id: String,
         #[serde(default)]
+        profile: String,
+        #[serde(default)]
         display_short_side: Option<i32>,
     },
     /// Linux 原生控制器（截图：Wlr/PipeWire，输入：Wlr/UInput/Libei）
@@ -153,6 +155,22 @@ pub enum ControllerConfig {
     },
 }
 
+impl ControllerConfig {
+    /// Pool identity. Display/UI parameters are connection options, not part
+    /// of the writable-session identity.
+    pub fn pool_key(&self) -> String {
+        match self {
+            ControllerConfig::CloudWeb {
+                backend,
+                session_id,
+                profile,
+                ..
+            } => format!("cloudweb|{backend}|{profile}|{session_id}"),
+            _ => serde_json::to_string(self).unwrap_or_else(|_| format!("{self:?}")),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::ControllerConfig;
@@ -178,7 +196,7 @@ mod tests {
     #[test]
     fn deserializes_cloudweb_controller_config() {
         let config: ControllerConfig = serde_json::from_str(
-            r#"{"type":"CloudWeb","backend":"fake","session_id":"session-a"}"#,
+            r#"{"type":"CloudWeb","backend":"fake","session_id":"session-a","profile":"default"}"#,
         )
         .expect("CloudWeb controller config should deserialize");
 
@@ -187,6 +205,7 @@ mod tests {
             ControllerConfig::CloudWeb {
                 backend: "fake".to_string(),
                 session_id: "session-a".to_string(),
+                profile: "default".to_string(),
                 display_short_side: None,
             }
         );
@@ -367,7 +386,7 @@ pub struct MaaState {
     /// 前置程序停止请求（用于中断等待退出）
     pub pre_action_stop_requests: Mutex<HashSet<String>>,
     /// Controller 连接池：相同配置的 Controller 复用同一个 MaaControllerHandle
-    pub controller_pool: Mutex<HashMap<ControllerConfig, Controller>>,
+    pub controller_pool: Mutex<HashMap<String, Controller>>,
     /// 缓存的 ADB 设备列表（全局共享，避免重复搜索）
     pub cached_adb_devices: Mutex<Vec<AdbDevice>>,
     /// 缓存的 Win32 窗口列表（全局共享）

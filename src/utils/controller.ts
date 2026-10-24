@@ -120,7 +120,7 @@ const WORKSTATION_UNLOCK_REQUIREMENT: Record<ControllerType, boolean> = {
   Linux: false,
   PlayCover: false,
   Gamepad: true,
-  CloudWeb: false,
+  CloudWeb: true,
 };
 
 /** Whether the controller depends on the interactive Windows desktop. */

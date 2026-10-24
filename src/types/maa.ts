@@ -98,8 +98,9 @@ export interface GamepadControllerConfig {
 /** CloudWeb 控制器配置 */
 export interface CloudWebControllerConfig {
   type: 'CloudWeb';
-  backend: string;
+  backend: 'sidecar' | 'fake';
   session_id: string;
+  profile: string;
   display_short_side?: number;
 }
 

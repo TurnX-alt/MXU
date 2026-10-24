@@ -428,6 +428,8 @@ export default {
     connected: 'Connected',
     disconnected: 'Disconnected',
     connectionFailed: 'Connection failed',
+    cloudWebUnsupportedBackend:
+      'The CloudWeb sidecar backend is not implemented yet; use a fake test configuration.',
     refreshDevices: 'Refresh Devices',
     refreshWindows: 'Refresh Windows',
     refresh: 'Refresh Devices',

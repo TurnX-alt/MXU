@@ -4,6 +4,9 @@
 //! identity and callback lifetime before the real sidecar/browser exists.
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+use sha2::{Digest, Sha256};
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use maa_framework::{
     controller::Controller, custom_controller::CustomControllerCallback, ControllerFeature,
 };
@@ -16,13 +19,22 @@ const FAKE_PNG_B64: &str =
 /// Deterministic fake controller used by the CloudWeb Host bridge.
 pub struct FakeCloudWebController {
     session_id: String,
+    profile: String,
+    uuid: String,
+    connected: AtomicBool,
     frame: Vec<u8>,
 }
 
 impl FakeCloudWebController {
-    pub fn new(session_id: impl Into<String>) -> Self {
+    pub fn new(session_id: impl Into<String>, profile: impl Into<String>) -> Self {
+        let session_id = session_id.into();
+        let profile = profile.into();
+        let uuid = stable_uuid(&format!("{session_id}:{profile}"));
         Self {
-            session_id: session_id.into(),
+            session_id,
+            profile,
+            uuid,
+            connected: AtomicBool::new(false),
             frame: STANDARD
                 .decode(FAKE_PNG_B64)
                 .expect("embedded fake PNG must be valid base64"),
@@ -34,17 +46,34 @@ impl FakeCloudWebController {
     }
 }
 
+fn stable_uuid(seed: &str) -> String {
+    let hex = format!("{:x}", Sha256::digest(seed.as_bytes()));
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hex[0..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    )
+}
+
 /// Build a CloudWeb controller for the configured backend.
-pub fn create_cloudweb_controller(backend: &str, session_id: &str) -> Result<Controller, String> {
+pub fn create_cloudweb_controller(
+    backend: &str,
+    session_id: &str,
+    profile: &str,
+) -> Result<Controller, String> {
     match backend {
-        "fake" => Controller::new_custom(FakeCloudWebController::new(session_id))
+        "fake" => Controller::new_custom(FakeCloudWebController::new(session_id, profile))
             .map_err(|error| error.to_string()),
-        other => Err(format!("Unsupported CloudWeb backend: {other}")),
+        other => Err(format!("cloudweb_backend_unsupported:{other}")),
     }
 }
 
 impl CustomControllerCallback for FakeCloudWebController {
     fn connect(&self) -> bool {
+        self.connected.store(true, Ordering::SeqCst);
         log::info!(
             target: "cloudweb",
             "fake CloudWeb controller connected: {}",
@@ -54,11 +83,11 @@ impl CustomControllerCallback for FakeCloudWebController {
     }
 
     fn connected(&self) -> bool {
-        true
+        self.connected.load(Ordering::SeqCst)
     }
 
     fn request_uuid(&self) -> Option<String> {
-        Some(self.session_id.clone())
+        Some(self.uuid.clone())
     }
 
     fn get_features(&self) -> ControllerFeature {
@@ -196,9 +225,19 @@ impl CustomControllerCallback for FakeCloudWebController {
     fn get_info(&self) -> String {
         json!({
             "backend": "cloud_web",
+            "backend_version": "0.1.0",
             "protocol_version": 1,
             "implementation": "fake",
             "session_id": self.session_id,
+            "profile": self.profile,
+            "ui_profile": "cloud_web.default",
+            "capabilities": [
+                "frame.latest",
+                "input.keyboard",
+                "input.relative",
+                "input.text",
+                "geometry.v1"
+            ],
         })
         .to_string()
     }
@@ -211,10 +250,19 @@ mod tests {
 
     #[test]
     fn fake_cloudweb_controller_reports_identity_and_frame() {
-        let controller = FakeCloudWebController::new("session-a");
+        let controller = FakeCloudWebController::new("session-a", "default");
+        assert!(!controller.connected());
         assert!(controller.connect());
         assert!(controller.connected());
-        assert_eq!(controller.request_uuid().as_deref(), Some("session-a"));
+        let uuid = controller.request_uuid().expect("stable request uuid");
+        assert_eq!(uuid.len(), 36);
+        assert_eq!(controller.request_uuid(), Some(uuid.clone()));
+        assert_ne!(
+            uuid,
+            FakeCloudWebController::new("session-b", "default")
+                .request_uuid()
+                .expect("other uuid")
+        );
 
         let frame = controller.screencap().expect("fake frame");
         assert!(frame.starts_with(b"\x89PNG\r\n\x1a\n"));
@@ -246,7 +294,7 @@ mod tests {
             return;
         }
 
-        let controller = super::create_cloudweb_controller("fake", "native-test")
+        let controller = super::create_cloudweb_controller("fake", "native-test", "default")
             .expect("create fake controller");
         controller
             .set_screenshot_target_short_side(720)

@@ -343,7 +343,7 @@ fn update_instance_controller(
 
     if let Some(old_cfg) = cleanup_config {
         if let Ok(mut pool) = state.controller_pool.lock() {
-            pool.remove(&old_cfg);
+            pool.remove(&old_cfg.pool_key());
             info!("ControllerPool: removed unused entry for old config");
         }
     }
@@ -771,7 +771,7 @@ pub fn destroy_instance_impl(state: &Arc<MaaState>, instance_id: &str) -> Result
     // ControllerPool: 清理不再被任何实例使用的条目
     if let Some(cfg) = cleanup_config {
         if let Ok(mut pool) = state.controller_pool.lock() {
-            pool.remove(&cfg);
+            pool.remove(&cfg.pool_key());
             info!("ControllerPool: cleaned up entry after instance destroy");
         }
     }
@@ -813,7 +813,9 @@ pub async fn connect_controller_impl(
                 .controller_pool
                 .lock()
                 .map_err(|e| e.to_string())?;
-            pool.get(&config).filter(|c| c.connected()).cloned()
+            pool.get(&config.pool_key())
+                .filter(|c| c.connected())
+                .cloned()
         };
 
         if let Some(pooled_ctrl) = pooled {
@@ -840,7 +842,7 @@ pub async fn connect_controller_impl(
                 .controller_pool
                 .lock()
                 .map_err(|e| e.to_string())?;
-            pool.remove(&config);
+            pool.remove(&config.pool_key());
         }
 
         info!(
@@ -935,8 +937,9 @@ pub async fn connect_controller_impl(
             ControllerConfig::CloudWeb {
                 backend,
                 session_id,
+                profile,
                 ..
-            } => cloudweb::create_cloudweb_controller(backend, session_id)?,
+            } => cloudweb::create_cloudweb_controller(backend, session_id, profile)?,
             ControllerConfig::Gamepad {
                 handle,
                 gamepad_type,
@@ -1064,8 +1067,14 @@ pub async fn connect_controller_impl(
             );
         }
 
-        // 发起连接
+        // 发起连接；只有连接确认成功后才允许进入 pool，避免失败连接被复用。
         let conn_id = controller.post_connection().map_err(|e| e.to_string())?;
+        let connect_status = controller.wait(conn_id).0;
+        if connect_status != MaaStatus::SUCCEEDED.0 {
+            return Err(format!(
+                "Controller connection failed with status {connect_status}"
+            ));
+        }
 
         // 存入 ControllerPool
         {
@@ -1073,7 +1082,7 @@ pub async fn connect_controller_impl(
                 .controller_pool
                 .lock()
                 .map_err(|e| e.to_string())?;
-            pool.insert(config.clone(), controller.clone());
+            pool.insert(config.pool_key(), controller.clone());
         }
 
         // 更新实例状态

@@ -147,8 +147,11 @@ export type ControllerType =
   | 'CloudWeb';
 
 export interface CloudWebConfig {
-  backend?: string;
-  session_id?: string;
+  backend?: 'sidecar' | 'fake';
+  profile?: string;
+  ui_profile?: string;
+  server_region?: string;
+  input_semantics?: string;
 }
 
 export interface ControllerItem {
@@ -400,6 +403,10 @@ export interface SavedDeviceInfo {
   uinputScreenHeight?: number;
   /** Win32 连接窗口对应的进程可执行文件路径 */
   connectedProgramPath?: string;
+  /** CloudWeb：保存 Host 生成的 opaque session id */
+  cloudWebSessionId?: string;
+  /** CloudWeb：保存 browser profile id */
+  cloudWebProfile?: string;
 }
 
 // 定时执行策略
