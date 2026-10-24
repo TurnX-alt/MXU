@@ -47,6 +47,8 @@ pub struct Cli {
     pub instance: Option<String>,
     #[arg(short = 'q', long = "quit-after-run")]
     pub quit_after_run: bool,
+    #[arg(long)]
+    pub no_elevate: bool,
 }
 
 pub fn init_cli() -> &'static Cli {
@@ -104,6 +106,9 @@ MXU 命令行参数
 
   -q, --quit-after-run
       当本次启动实际触发自动执行后，在任务完成时自动退出
+
+  --no-elevate
+      不请求管理员权限；本地自动化流水线使用，CloudWeb 侧车不需要提权
 
 示例:
   {exe_name} --autostart --instance \"日常任务\"
@@ -817,6 +822,11 @@ pub fn get_start_instance() -> Option<String> {
 #[tauri::command]
 pub fn has_quit_after_run_flag() -> bool {
     init_cli().quit_after_run
+}
+
+/// 本地自动化流水线：跳过 Windows 自提权，保留启动器的环境变量。
+pub fn has_no_elevate_flag() -> bool {
+    init_cli().no_elevate
 }
 
 /// 自动迁移旧版注册表自启动到任务计划程序
