@@ -1,16 +1,16 @@
-//! CloudWeb Host bridge placeholder.
+//! Deterministic fake backend used to qualify the controller factory, pool
+//! identity and callback lifetime without a browser.
 //!
-//! Uses a deterministic fake backend to qualify the controller factory, pool
-//! identity and callback lifetime before the real sidecar/browser exists.
+//! Production must not fall back to this implementation; `sidecar` is the real
+//! backend and unknown backends fail with an explicit error.
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use maa_framework::{
-    controller::Controller, custom_controller::CustomControllerCallback, ControllerFeature,
-};
+use maa_framework::{custom_controller::CustomControllerCallback, ControllerFeature};
 use serde_json::json;
+
+use super::stable_uuid;
 
 /// 16:9 red PNG. MaaFramework scales it to the configured screenshot target.
 const FAKE_PNG_B64: &str =
@@ -29,7 +29,7 @@ impl FakeCloudWebController {
     pub fn new(session_id: impl Into<String>, profile: impl Into<String>) -> Self {
         let session_id = session_id.into();
         let profile = profile.into();
-        let uuid = stable_uuid(&format!("{session_id}:{profile}"));
+        let uuid = stable_uuid(&format!("fake:{session_id}:{profile}"));
         Self {
             session_id,
             profile,
@@ -43,31 +43,6 @@ impl FakeCloudWebController {
 
     pub fn session_id(&self) -> &str {
         &self.session_id
-    }
-}
-
-fn stable_uuid(seed: &str) -> String {
-    let hex = format!("{:x}", Sha256::digest(seed.as_bytes()));
-    format!(
-        "{}-{}-{}-{}-{}",
-        &hex[0..8],
-        &hex[8..12],
-        &hex[12..16],
-        &hex[16..20],
-        &hex[20..32]
-    )
-}
-
-/// Build a CloudWeb controller for the configured backend.
-pub fn create_cloudweb_controller(
-    backend: &str,
-    session_id: &str,
-    profile: &str,
-) -> Result<Controller, String> {
-    match backend {
-        "fake" => Controller::new_custom(FakeCloudWebController::new(session_id, profile))
-            .map_err(|error| error.to_string()),
-        other => Err(format!("cloudweb_backend_unsupported:{other}")),
     }
 }
 
@@ -276,6 +251,15 @@ mod tests {
     }
 
     #[test]
+    fn fake_cloudweb_controller_does_not_share_uuid_with_sidecar_seed() {
+        let fake = FakeCloudWebController::new("session-a", "default")
+            .request_uuid()
+            .expect("fake uuid");
+        let sidecar = super::stable_uuid("sidecar:session-a:default");
+        assert_ne!(fake, sidecar);
+    }
+
+    #[test]
     fn fake_cloudweb_controller_connects_and_captures_native_frame() {
         let Ok(sdk) = std::env::var("MAA_SDK_PATH") else {
             return;
@@ -294,7 +278,7 @@ mod tests {
             return;
         }
 
-        let controller = super::create_cloudweb_controller("fake", "native-test", "default")
+        let controller = super::super::create_cloudweb_controller("fake", "native-test", "default")
             .expect("create fake controller");
         controller
             .set_screenshot_target_short_side(720)

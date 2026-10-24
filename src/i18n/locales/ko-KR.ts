@@ -419,7 +419,7 @@ export default {
     disconnected: '연결 안 됨',
     connectionFailed: '연결에 실패했습니다',
     cloudWebUnsupportedBackend:
-      '현재 버전에서는 CloudWeb sidecar backend가 구현되지 않았습니다. fake 테스트 설정을 사용하세요.',
+      '지원되지 않는 CloudWeb backend입니다. fake 또는 sidecar를 사용하세요.',
     refreshDevices: '기기 새로고침',
     refreshWindows: '윈도우 새로고침',
     refresh: '기기 새로고침',

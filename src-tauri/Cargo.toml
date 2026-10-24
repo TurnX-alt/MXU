@@ -36,7 +36,15 @@ base64 = "0.22"
 zip = "7.2.0"
 flate2 = "1.0"
 tar = "0.4"
-tokio = { version = "1", features = ["rt", "sync", "net", "rt-multi-thread"] }
+tokio = { version = "1", features = [
+    "rt",
+    "sync",
+    "net",
+    "rt-multi-thread",
+    "io-util",
+    "time",
+] }
+
 reqwest = { version = "0.12", features = ["stream", "blocking", "json", "socks"] }
 axum = { version = "0.7", features = ["ws"] }
 tower-http = { version = "0.5", features = ["cors", "fs"] }
@@ -82,9 +90,12 @@ winsafe = { version = "0.0.28", features = [
     "user"
 ] }
 windows = { version = "0.61.3", features = [
+    "Win32_Foundation",
     "Win32_Media_Audio",
     "Win32_Media_Audio_Endpoints",
+    "Win32_Security_Cryptography",
     "Win32_System_Com",
     "Win32_System_Com_StructuredStorage",
     "Win32_System_Variant",
 ] }
+

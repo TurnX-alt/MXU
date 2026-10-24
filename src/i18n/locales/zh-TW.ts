@@ -409,7 +409,7 @@ export default {
     connected: '已連接',
     disconnected: '未連接',
     connectionFailed: '連接失敗',
-    cloudWebUnsupportedBackend: '目前版本尚未實作 CloudWeb sidecar backend；請使用 fake 測試設定。',
+    cloudWebUnsupportedBackend: '不支援的 CloudWeb backend，請使用 fake 或 sidecar。',
     refreshDevices: '重新整理裝置',
     refreshWindows: '重新整理視窗',
     refresh: '重新整理裝置',

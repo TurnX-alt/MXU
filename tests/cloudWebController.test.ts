@@ -29,12 +29,12 @@ test('CloudWeb config uses the fake backend, explicit session and profile', () =
   );
 });
 
-test('CloudWeb defaults to fake only when no backend is configured', () => {
+test('CloudWeb defaults to the real sidecar backend when none is configured', () => {
   assert.deepEqual(
     buildCloudWebControllerConfig({ name: 'CloudWeb', type: 'CloudWeb' }, 'session-2'),
     {
       type: 'CloudWeb',
-      backend: 'fake',
+      backend: 'sidecar',
       session_id: 'session-2',
       profile: 'default',
       display_short_side: undefined,
@@ -42,20 +42,37 @@ test('CloudWeb defaults to fake only when no backend is configured', () => {
   );
 });
 
-test('CloudWeb rejects the unimplemented sidecar backend', () => {
-  assert.equal(isCloudWebBackendSupported('sidecar'), false);
-  assert.equal(
+test('CloudWeb accepts the sidecar backend and rejects unknown backends', () => {
+  assert.equal(isCloudWebBackendSupported('sidecar'), true);
+  assert.equal(isCloudWebBackendSupported('fake'), true);
+  assert.equal(isCloudWebBackendSupported('browser'), false);
+  assert.equal(isCloudWebBackendSupported(undefined), false);
+  assert.deepEqual(
     buildCloudWebControllerConfig(
       {
         name: 'CloudWeb',
         type: 'CloudWeb',
-        cloudweb: { backend: 'sidecar' },
+        cloudweb: { backend: 'sidecar', profile: 'cloud' },
       },
       'session-3',
+    ),
+    {
+      type: 'CloudWeb',
+      backend: 'sidecar',
+      session_id: 'session-3',
+      profile: 'cloud',
+      display_short_side: undefined,
+    },
+  );
+  assert.equal(
+    buildCloudWebControllerConfig(
+      { name: 'CloudWeb', type: 'CloudWeb', cloudweb: { backend: 'browser' } },
+      'session-4',
     ),
     null,
   );
 });
+
 
 test('CloudWeb requires a non-empty session id', () => {
   assert.equal(buildCloudWebControllerConfig({ name: 'CloudWeb', type: 'CloudWeb' }, '  '), null);

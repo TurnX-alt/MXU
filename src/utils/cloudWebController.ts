@@ -2,11 +2,12 @@ import type { ControllerItem } from '@/types/interface';
 import type { CloudWebControllerConfig } from '@/types/maa';
 
 /** Backends accepted by the current Rust Host factory. */
-const SUPPORTED_BACKENDS = new Set(['fake']);
+const SUPPORTED_BACKENDS = new Set(['fake', 'sidecar']);
 
-export function isCloudWebBackendSupported(backend: string | undefined): backend is 'fake' {
+export function isCloudWebBackendSupported(backend: string | undefined): backend is 'sidecar' | 'fake' {
   return backend !== undefined && SUPPORTED_BACKENDS.has(backend);
 }
+
 
 export function createCloudWebSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -27,7 +28,10 @@ export function buildCloudWebControllerConfig(
   controller: ControllerItem | undefined,
   sessionId: string,
 ): CloudWebControllerConfig | null {
-  const backend = controller?.cloudweb?.backend ?? 'fake';
+  // An unconfigured CloudWeb controller uses the real sidecar backend; the fake
+  // stub is only reachable when an interface explicitly selects it.
+  const backend = controller?.cloudweb?.backend ?? 'sidecar';
+
   if (!isCloudWebBackendSupported(backend)) {
     return null;
   }

@@ -429,7 +429,7 @@ export default {
     disconnected: 'Disconnected',
     connectionFailed: 'Connection failed',
     cloudWebUnsupportedBackend:
-      'The CloudWeb sidecar backend is not implemented yet; use a fake test configuration.',
+      'Unsupported CloudWeb backend; use fake or sidecar.',
     refreshDevices: 'Refresh Devices',
     refreshWindows: 'Refresh Windows',
     refresh: 'Refresh Devices',

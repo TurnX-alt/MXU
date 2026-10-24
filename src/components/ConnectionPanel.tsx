@@ -1394,7 +1394,7 @@ export function ConnectionPanel() {
     if (controllerType === 'CloudWeb') {
       return (
         !!currentController &&
-        isCloudWebBackendSupported(currentController.cloudweb?.backend ?? 'fake')
+        isCloudWebBackendSupported(currentController.cloudweb?.backend ?? 'sidecar')
       );
     }
     return false;
@@ -1710,12 +1710,12 @@ export function ConnectionPanel() {
               </div>
             )}
 
-            {/* CloudWeb 连接入口（当前 fake backend；真实 sidecar 后续接入） */}
+            {/* CloudWeb 连接入口（backend 由 interface 的 cloudweb.backend 决定：sidecar 或 fake） */}
             {controllerType === 'CloudWeb' && (
               <div className="flex gap-2">
                 <div className="flex-1 min-w-0 px-2.5 py-1.5 rounded-md border bg-bg-tertiary border-border text-sm text-text-secondary">
                   <div className="truncate">{currentController?.name ?? 'CloudWeb'}</div>
-                  {!isCloudWebBackendSupported(currentController?.cloudweb?.backend ?? 'fake') && (
+                  {!isCloudWebBackendSupported(currentController?.cloudweb?.backend ?? 'sidecar') && (
                     <div className="mt-0.5 text-xs text-text-muted">
                       {t('controller.cloudWebUnsupportedBackend')}
                     </div>
