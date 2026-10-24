@@ -11,8 +11,37 @@ use tauri::Manager;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 use ws_broadcast::WsBroadcast;
 
+#[cfg(windows)]
+fn apply_cloudweb_sidecar_config() {
+    // The app self-elevates on Windows; ShellExecuteEx does not carry the
+    // launcher's custom environment. Read a local file instead so the sidecar
+    // backend still has its executable/args after elevation.
+    let Ok(exe) = std::env::current_exe() else { return };
+    let Some(dir) = exe.parent() else { return };
+    let Ok(text) = std::fs::read_to_string(dir.join("cloudweb-sidecar.json")) else { return };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else { return };
+    if std::env::var_os("CLOUDWEB_SIDECAR_PATH").is_none() {
+        if let Some(path) = value.get("path").and_then(|v| v.as_str()) {
+            std::env::set_var("CLOUDWEB_SIDECAR_PATH", path);
+        }
+    }
+    if std::env::var_os("CLOUDWEB_SIDECAR_ARGS").is_none() {
+        if let Some(args) = value.get("args").and_then(|v| v.as_str()) {
+            std::env::set_var("CLOUDWEB_SIDECAR_ARGS", args);
+        }
+    }
+    if std::env::var_os("CLOUDWEB_IDLE_TIMEOUT_SECS").is_none() {
+        if let Some(secs) = value.get("idle_timeout_secs").and_then(|v| v.as_u64()) {
+            std::env::set_var("CLOUDWEB_IDLE_TIMEOUT_SECS", secs.to_string());
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(windows)]
+    apply_cloudweb_sidecar_config();
+
     // 日志目录：exe 目录/debug/logs（与前端日志同目录）
     let logs_dir = commands::utils::get_logs_dir();
 

@@ -13,7 +13,7 @@ use axum::{
     },
     http::{header, HeaderMap, Method, StatusCode},
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 #[cfg(not(debug_assertions))]
@@ -216,6 +216,8 @@ pub async fn start_web_server(
         .route("/background-image", get(handle_get_background_image))
         // WebSocket 实时推送
         .route("/ws", get(handle_ws_upgrade))
+        // 生命周期控制：本地自动化流水线用，应用自己退出，避免外部 kill 提权问题
+        .route("/app/quit", post(handle_app_quit))
         // Maa 状态查询
         .route("/maa/state", get(handle_get_maa_state))
         .route("/maa/initialized", get(handle_get_maa_initialized))
@@ -611,6 +613,17 @@ async fn handle_put_config(
         )
             .into_response(),
     }
+}
+
+/// POST /api/app/quit
+/// 请求应用自行退出；本地流水线用它完成生命周期回收，避免外部 kill 的权限问题。
+async fn handle_app_quit(State(state): State<WebState>) -> impl IntoResponse {
+    let app = state.app_handle.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        app.exit(0);
+    });
+    Json(serde_json::json!({ "ok": true, "action": "quit" })).into_response()
 }
 
 /// GET /api/maa/state
