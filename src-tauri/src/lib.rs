@@ -330,6 +330,7 @@ pub fn run() {
             commands::system::is_elevated,
             commands::system::is_workstation_locked,
             commands::system::is_autostart,
+            commands::system::is_no_show_launch,
             commands::system::get_start_instance,
             commands::system::has_quit_after_run_flag,
             commands::system::restart_as_admin,

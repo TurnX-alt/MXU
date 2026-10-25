@@ -49,6 +49,9 @@ pub struct Cli {
     pub quit_after_run: bool,
     #[arg(long)]
     pub no_elevate: bool,
+    /// Background/automation launch: create the UI but never show or focus it.
+    #[arg(long)]
+    pub no_show: bool,
 }
 
 pub fn init_cli() -> &'static Cli {
@@ -810,6 +813,12 @@ pub fn check_vcredist_missing() -> bool {
 #[tauri::command]
 pub fn is_autostart() -> bool {
     init_cli().autostart
+}
+
+/// 检查命令行是否包含 --no-show（本地自动化/后台运行：不显示、不取焦点）。
+#[tauri::command]
+pub fn is_no_show_launch() -> bool {
+    init_cli().no_show
 }
 
 /// 获取命令行 -i/--instance 参数指定的启动实例名称

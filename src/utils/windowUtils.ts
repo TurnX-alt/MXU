@@ -132,8 +132,32 @@ export async function getWindowSize(): Promise<{ width: number; height: number }
  * WebView2 在隐藏窗口创建阶段请求焦点可能使整个 WebView 创建失败。
  */
 let windowShown = false;
+let noShowCache: boolean | null = null;
+async function isNoShowLaunch(): Promise<boolean> {
+  if (noShowCache !== null) return noShowCache;
+  if (!isTauri()) {
+    noShowCache = false;
+    return false;
+  }
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    noShowCache = await invoke<boolean>('is_no_show_launch');
+  } catch {
+    noShowCache = false;
+  }
+  return noShowCache;
+}
+
 export async function showWindow(): Promise<void> {
   if (windowShown) return;
+
+  // Background/automation launch (--no-show): keep the window hidden so the
+  // host never takes the user's foreground focus.
+  if (await isNoShowLaunch()) {
+    windowShown = true;
+    log.info('no-show 启动：保持窗口隐藏');
+    return;
+  }
 
   if (isTauri()) {
     try {
@@ -156,6 +180,7 @@ export async function showWindow(): Promise<void> {
  * 用于更新重启后确保窗口在前台显示
  */
 export async function focusWindow(): Promise<void> {
+  if (await isNoShowLaunch()) return;
   if (isTauri()) {
     try {
       const { getCurrentWindow } = await import('@tauri-apps/api/window');
